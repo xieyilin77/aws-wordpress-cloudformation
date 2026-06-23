@@ -134,4 +134,27 @@ Prerequisites:
                 "PrefixListIds": []                                                                                                    
             }                                                                                                                          
         ]                                                                                                                              
-    ]                                                                                                                                  
+    ]                                                                                                       
+
+9. Validation Evidence
+    - scrennshots\VPC with subnets.png
+    - scrennshots\Subnets.png
+    - scrennshots\Subne-Associations.png
+    - scrennshots\Route-Tables.png
+    - scrennshots\Internet-Gateway.png
+    - scrennshots\Security-Group.png
+
+10. Cleanup Instructions (Powershell)
+    # 1. Delete WordPress stack
+    aws cloudformation delete-stack --stack-name wordpress-app
+    aws cloudformation wait stack-delete-complete --stack-name wordpress-app
+
+    # 2. Delete Security Groups stack
+    aws cloudformation delete-stack --stack-name wordpress-security-groups
+    aws cloudformation wait stack-delete-complete --stack-name wordpress-security-groups
+
+    # 3. Delete VPC stack
+    aws cloudformation delete-stack --stack-name wordpress-vpc
+    aws cloudformation wait stack-delete-complete --stack-name wordpress-vpc
+
+    
