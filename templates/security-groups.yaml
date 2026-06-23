@@ -1,0 +1,56 @@
+
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'Security Groups for WordPress Application'
+
+Parameters:
+  EnvironmentName:
+    Type: String
+    Default: wordpress
+    Description: Environment name for resource naming
+  
+  VPC:
+    Type: AWS::EC2::VPC::Id
+    Description: VPC ID where security groups will be created
+
+Resources:
+  # ========================================
+  # 1. Web Server Security Group (EC2)
+  # ========================================
+  WebServerSG:
+    Type: AWS::EC2::SecurityGroup    
+    Properties:
+        GroupName: !Sub '${EnvironmentName}-web-sg'
+        GroupDescription: Web Server Security Group
+        VpcId: !Ref VPC
+
+        SecurityGroupIngress:
+        # SSH 
+            - IpProtocol: tcp
+              FromPort: 22
+              ToPort: 22
+              CidrIp: 0.0.0.0/0
+
+            # HTTP
+            - IpProtocol: tcp
+              FromPort: 80
+              ToPort: 80
+              CidrIp: 0.0.0.0/0
+
+            - IpProtocol: tcp
+              FromPort: 443
+              ToPort: 443
+              CidrIp: 0.0.0.0/0
+        
+        Tags:
+            - Key: Name
+              Value: !Sub '${EnvironmentName}-web-sg'
+
+# ========================================
+# OUTPUTS
+# ========================================
+Outputs:
+    WebServerSG:
+        Description: Web Server Security Group ID
+        Value: !Ref WebServerSG
+        Export:
+            Name: !Sub ${EnvironmentName}-WebServerSG

@@ -1,0 +1,65 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: WordPress Server
+
+Parameters:
+
+    KeyPairName:
+        Type: AWS::EC2::KeyPair::KeyName
+
+    PublicSubnetId:
+        Type: AWS::EC2::Subnet::Id
+
+    WebServerSG:
+        Type: AWS::EC2::SecurityGroup::Id
+
+    AmazonLinuxAMIID:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2
+
+Resources:
+
+    WordPressInstance:
+        Type: AWS::EC2::Instance
+        Properties:
+        InstanceType: t3.micro
+        ImageId: !Ref AmazonLinuxAMIID
+        KeyName: !Ref KeyPairName
+
+        NetworkInterfaces:
+            - AssociatePublicIpAddress: true
+            DeviceIndex: 0
+            GroupSet:
+                - !Ref WebServerSG
+            SubnetId: !Ref PublicSubnetId
+
+        UserData:
+            Fn::Base64: !Sub |
+            #!/bin/bash
+
+            dnf update -y
+
+            dnf install -y httpd
+            dnf install -y php php-mysqlnd php-json php-gd php-mbstring php-xml
+            dnf install -y mariadb105
+
+            systemctl enable httpd
+            systemctl start httpd
+
+            cd /tmp
+
+            wget https://wordpress.org/latest.tar.gz
+
+            tar -xzf latest.tar.gz
+
+            cp -r wordpress/* /var/www/html/
+
+            chown -R apache:apache /var/www/html
+
+            chmod -R 755 /var/www/html
+
+            systemctl restart httpd
+
+    Outputs:
+
+    PublicIP:
+        Value: !GetAtt WordPressInstance.PublicIp
