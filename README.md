@@ -6,27 +6,27 @@ Prerequisites:
 - VS Code with AWS Toolkit extension (optional)
 - IAM User with CloudFormation full access
 
-1. AWS account and access credentials
+# 1. AWS account and access credentials
     # Check if AWS CLI is installed
     aws --version
     # Configure AWS CLI (if not already done)
     aws configure
 
-2. Create architecture diagram
+# 2. Create architecture diagram
 
-3. Create directory structure
+# 3. Create directory structure
     wordpress-cloudformation/
     ├── templates/
     |── architecture_diagrams
     |── scripts
     |── screenshots
 
-4. Creating cloudFormation templates
+# 4. Creating cloudFormation templates
     - vpc.yaml
     - security-groups.yaml
     - wordpress-server.yaml
 
-5. Deployment with AWS CLI
+# 5. Deployment with AWS CLI
     - Deploy VPC stack: automatically creates the AWS resources defined therein (VPC, subnets, etc.).
         aws cloudformation create-stack `
         --stack-name wordpress-vpc `
@@ -37,7 +37,7 @@ Prerequisites:
 
         aws cloudformation describe-stacks --stack-name wordpress-vpc --query "Stacks[0].StackStatus"
 
-6. Deploy the VPC stack
+# 6. Deploy the VPC stack
     # Retrieve VPC ID
     $VPC_ID = aws cloudformation describe-stacks `
     --stack-name wordpress-vpc `
@@ -86,7 +86,7 @@ Prerequisites:
 
     Write-Host "VPC ID: $VPC_ID" -ForegroundColor Green
 
-7. Deploy Security Groups Stack
+# 7. Deploy Security Groups Stack
     # Deploy Security Groups Stack with VPC ID
     aws cloudformation create-stack `
     --stack-name wordpress-security-groups `
@@ -100,7 +100,7 @@ Prerequisites:
     # Check status
     aws cloudformation describe-stacks --stack-name wordpress-security-groups --query "Stacks[0].StackStatus"
 
-8. Verify security groups
+# 8. Verify security groups
     # List all security groups in the VPC
     aws ec2 describe-security-groups --filters "Name=vpc-id,Values=$VPC_ID" --query "SecurityGroups[*].[GroupName,GroupId,Description]" --output table
 
@@ -136,7 +136,7 @@ Prerequisites:
         ]                                                                                                                              
     ]                                                                                                       
 
-9. Validation Evidence
+# 9. Validation Evidence
     - scrennshots\VPC with subnets.png
     - scrennshots\Subnets.png
     - scrennshots\Subne-Associations.png
@@ -144,7 +144,7 @@ Prerequisites:
     - scrennshots\Internet-Gateway.png
     - scrennshots\Security-Group.png
 
-10. Cleanup Instructions (Powershell)
+# 10. Cleanup Instructions (Powershell)
     # 1. Delete WordPress stack
     aws cloudformation delete-stack --stack-name wordpress-app
     aws cloudformation wait stack-delete-complete --stack-name wordpress-app
