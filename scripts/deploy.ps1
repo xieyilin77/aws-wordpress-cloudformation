@@ -1,5 +1,4 @@
 # Deploy Network Stack
-
 Write-Host ""
 Write-Host "Deploying Network Stack..."
 Write-Host ""

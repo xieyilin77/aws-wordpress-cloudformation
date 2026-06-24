@@ -1,3 +1,4 @@
+# Deploy Network Stack and WordPress Stack
 $NetworkStack = "wordpress-network-security"
 $ServerStack = "wordpress-server"
 $Enviroment = "wordpress2"
