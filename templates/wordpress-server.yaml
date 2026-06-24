@@ -1,65 +1,92 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: WordPress Server
+Description: WordPress EC2 Server with Automated Installation
 
 Parameters:
+    EnvironmentName:
+        Type: String
+        Default: wordpress
 
     KeyPairName:
         Type: AWS::EC2::KeyPair::KeyName
-
-    PublicSubnetId:
-        Type: AWS::EC2::Subnet::Id
-
-    WebServerSG:
-        Type: AWS::EC2::SecurityGroup::Id
+        Description: EC2 Key Pair
 
     AmazonLinuxAMIID:
-    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
-    Default: /aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2
+        Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+        Default: /aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2
 
 Resources:
 
     WordPressInstance:
         Type: AWS::EC2::Instance
+
         Properties:
-        InstanceType: t3.micro
-        ImageId: !Ref AmazonLinuxAMIID
-        KeyName: !Ref KeyPairName
+            InstanceType: t2.micro
+            ImageId: !Ref AmazonLinuxAMIID
+            KeyName: !Ref KeyPairName
 
-        NetworkInterfaces:
-            - AssociatePublicIpAddress: true
-            DeviceIndex: 0
-            GroupSet:
-                - !Ref WebServerSG
-            SubnetId: !Ref PublicSubnetId
+            SubnetId:
+                Fn::ImportValue: wordpress-PublicSubnet1
 
-        UserData:
-            Fn::Base64: !Sub |
-            #!/bin/bash
+            SecurityGroupIds:
+                - Fn::ImportValue: wordpress-WebServerSG
 
-            dnf update -y
+            Tags:
+                - Key: Name
+                  Value: wordpress-server
 
-            dnf install -y httpd
-            dnf install -y php php-mysqlnd php-json php-gd php-mbstring php-xml
-            dnf install -y mariadb105
+            UserData:
+                Fn::Base64: !Sub |
+                    #!/bin/bash
 
-            systemctl enable httpd
-            systemctl start httpd
+                    yum update -y
 
-            cd /tmp
+                    yum install -y httpd wget unzip
 
-            wget https://wordpress.org/latest.tar.gz
+                    amazon-linux-extras enable php8.2
 
-            tar -xzf latest.tar.gz
+                    yum clean metadata
 
-            cp -r wordpress/* /var/www/html/
+                    yum install -y php php-mysqlnd
 
-            chown -R apache:apache /var/www/html
+                    systemctl start httpd
+                    systemctl enable httpd
 
-            chmod -R 755 /var/www/html
+                    echo "Apache is working" > /var/www/html/health.html
 
-            systemctl restart httpd
+                    cd /tmp
 
-    Outputs:
+                    wget https://wordpress.org/latest.tar.gz
 
-    PublicIP:
-        Value: !GetAtt WordPressInstance.PublicIp
+                    tar -xzf latest.tar.gz
+
+                    cp -r wordpress/* /var/www/html/
+
+                    chown -R apache:apache /var/www/html
+
+                    chmod -R 755 /var/www/html
+
+                    systemctl restart httpd
+
+Outputs:
+
+  InstanceId:
+    Description: EC2 Instance ID
+    Value: !Ref WordPressInstance
+
+
+  PublicIP:
+    Description: Public IP Address
+    Value: !GetAtt WordPressInstance.PublicIp
+
+
+  PublicDNS:
+    Description: Public DNS Name
+    Value: !GetAtt WordPressInstance.PublicDnsName
+
+
+  WordPressURL:
+    Description: WordPress Website URL
+    Value: !Sub 
+      - "http://${PublicIP}"
+      - PublicIP: !GetAtt WordPressInstance.PublicIp
+       

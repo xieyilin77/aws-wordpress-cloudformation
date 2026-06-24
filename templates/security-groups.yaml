@@ -13,11 +13,13 @@ Resources:
   # 1. Web Server Security Group (EC2)
   # ========================================
   WebServerSG:
-    Type: AWS::EC2::SecurityGroup    
+    Type: AWS::EC2::SecurityGroup
     Properties:
       GroupName: !Sub '${EnvironmentName}-web-sg'
       GroupDescription: Web Server Security Group
-      VpcId: Fn::ImportValue: !Sub '${EnvironmentName}-VPC'
+      VpcId: 
+        Fn::ImportValue:
+          !Sub '${EnvironmentName}-VPC'
 
       SecurityGroupIngress:
         # SSH 
@@ -57,7 +59,8 @@ Resources:
     Properties:
       GroupName: !Sub '${EnvironmentName}-db-sg'
       GroupDescription: Security Group for MySQL Database
-      VpcId:  Fn::ImportValue: !Sub '${EnvironmentName}-VPC'
+      VpcId: 
+        Fn::ImportValue: !Sub '${EnvironmentName}-VPC'
 
       SecurityGroupIngress:
 

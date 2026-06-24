@@ -137,7 +137,20 @@
                 "PrefixListIds": []                                                                                                    
             }                                                                                                                          
         ]                                                                                                                              
-    ]                                                                                                       
+    ]                                                                                                
+
+# Deploy with deploy.ps1
+    # Output: 
+        Deploying Network Stack...
+        Waiting for changeset to be created..
+        Waiting for stack create/update to complete
+        Successfully created/updated stack - wordpress-network
+        Network Stack Finished.
+        Deploying Security Group Stack...
+        Waiting for changeset to be created..
+        Waiting for stack create/update to complete
+        Successfully created/updated stack - wordpress-security
+        Security Group Stack Finished.
 
 # 9. Validation Evidence
     - scrennshots\VPC with subnets.png
