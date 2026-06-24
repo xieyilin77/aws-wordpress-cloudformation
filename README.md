@@ -1,6 +1,9 @@
 # aws-wordpress-cloudformation
 
-Prerequisites:
+# Key Features
+  > Cloudformation
+
+# Prerequisites:
 - Account with appropriate permissions
 - AWS CLI installed and configured
 - VS Code with AWS Toolkit extension (optional)
