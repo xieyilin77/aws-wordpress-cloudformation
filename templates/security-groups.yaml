@@ -19,31 +19,69 @@ Resources:
   WebServerSG:
     Type: AWS::EC2::SecurityGroup    
     Properties:
-        GroupName: !Sub '${EnvironmentName}-web-sg'
-        GroupDescription: Web Server Security Group
-        VpcId: !Ref VPC
+      GroupName: !Sub '${EnvironmentName}-web-sg'
+      GroupDescription: Web Server Security Group
+      VpcId: !Ref VPC
 
         SecurityGroupIngress:
-        # SSH 
-            - IpProtocol: tcp
-              FromPort: 22
-              ToPort: 22
-              CidrIp: 0.0.0.0/0
+          # SSH 
+          - IpProtocol: tcp
+            FromPort: 22
+            ToPort: 22
+            CidrIp: 0.0.0.0/0
+            Description: SSH from anywhere
 
-            # HTTP
-            - IpProtocol: tcp
-              FromPort: 80
-              ToPort: 80
-              CidrIp: 0.0.0.0/0
+          # HTTP
+          - IpProtocol: tcp
+            FromPort: 80
+            ToPort: 80
+            CidrIp: 0.0.0.0/0
+            Description: HTTP from anywhere
 
-            - IpProtocol: tcp
-              FromPort: 443
-              ToPort: 443
-              CidrIp: 0.0.0.0/0
-        
+          - IpProtocol: tcp
+            FromPort: 443
+            ToPort: 443
+            CidrIp: 0.0.0.0/0
+            Description: HTTPS from anywhere
+
         Tags:
-            - Key: Name
-              Value: !Sub '${EnvironmentName}-web-sg'
+          - Key: Name
+            Value: !Sub '${EnvironmentName}-web-sg'
+
+      SecurityGroupEgress:
+
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+          Description: Allow all outbound traffic
+
+  # =====================================================
+  # Database Security Group
+  # =====================================================
+  DatabaseSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Sub '${EnvironmentName}-db-sg'
+      GroupDescription: Security Group for MySQL Database
+      VpcId: !Ref VPC
+
+      SecurityGroupIngress:
+
+        # MySQL only from Web Server SG
+        - IpProtocol: tcp
+          FromPort: 3306
+          ToPort: 3306
+          SourceSecurityGroupId: !Ref WebServerSG
+          Description: MySQL access from Web Server
+
+      SecurityGroupEgress:
+
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+          Description: Allow all outbound traffic
+
+      Tags:
+        - Key: Name
+          Value: !Sub '${EnvironmentName}-db-sg'
 
 # ========================================
 # OUTPUTS
@@ -54,3 +92,9 @@ Outputs:
         Value: !Ref WebServerSG
         Export:
             Name: !Sub ${EnvironmentName}-WebServerSG
+
+    DatabaseSG:
+        Description: Database Security Group ID
+        Value: !Ref DatabaseSG
+        Export:
+          Name: !Sub '${EnvironmentName}-DatabaseSG'
