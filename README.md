@@ -173,4 +173,7 @@
     aws cloudformation delete-stack --stack-name wordpress-vpc
     aws cloudformation wait stack-delete-complete --stack-name wordpress-vpc
 
+# 11. Create an Amazon EC2 Instance
+
+
     
