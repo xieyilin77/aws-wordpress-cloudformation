@@ -101,21 +101,12 @@ Infrastructure Components
     # Configure AWS CLI (if not already done)
     aws configure
 
-### 2. Create architecture diagram
-
-### 3. Create directory structure
-    wordpress-cloudformation/
-    ├── templates/
-    |── architecture_diagrams
-    |── scripts
-    |── screenshots
-
-### 4. Creating cloudFormation templates
+### 2. Creating cloudFormation templates
     - vpc.yaml
     - security-groups.yaml
     - wordpress-server.yaml
 
-### 5. Deployment with AWS CLI
+### 3. Deployment with AWS CLI
     - Deploy VPC stack: automatically creates the AWS resources defined therein (VPC, subnets, etc.).
         aws cloudformation create-stack `
         --stack-name wordpress-vpc `
@@ -126,7 +117,7 @@ Infrastructure Components
 
         aws cloudformation describe-stacks --stack-name wordpress-vpc --query "Stacks[0].StackStatus"
 
-### 6. Deploy the VPC stack
+### 4. Deploy the VPC stack
     # Retrieve VPC ID
     $VPC_ID = aws cloudformation describe-stacks `
     --stack-name wordpress-vpc `
@@ -175,7 +166,7 @@ Infrastructure Components
 
     Write-Host "VPC ID: $VPC_ID" -ForegroundColor Green
 
-### 7. Deploy Security Groups Stack
+### 5. Deploy Security Groups Stack
     # Deploy Security Groups Stack with VPC ID
     aws cloudformation create-stack `
     --stack-name wordpress-security-groups `
@@ -189,7 +180,7 @@ Infrastructure Components
     # Check status
     aws cloudformation describe-stacks --stack-name wordpress-security-groups --query "Stacks[0].StackStatus"
 
-### 8. Verify security groups
+### 6. Verify security groups
     # List all security groups in the VPC
     aws ec2 describe-security-groups --filters "Name=vpc-id,Values=$VPC_ID" --query "SecurityGroups[*].[GroupName,GroupId,Description]" --output table
 
@@ -225,7 +216,7 @@ Infrastructure Components
         ]                                                                                                                              
     ]                                                                                                
 
-### Deploy with deploy.ps1
+#### Deploy with deploy.ps1
     # Output: 
         Deploying Network Stack...
         Waiting for changeset to be created..
@@ -238,7 +229,7 @@ Infrastructure Components
         Successfully created/updated stack - wordpress-security
         Security Group Stack Finished.
 
-### 9. Validation Evidence
+### 7. Validation Evidence
     - scrennshots\VPC with subnets.png
     - scrennshots\Subnets.png
     - scrennshots\Subne-Associations.png
@@ -246,7 +237,7 @@ Infrastructure Components
     - scrennshots\Internet-Gateway.png
     - scrennshots\Security-Group.png
 
-### 10. Cleanup Instructions (Powershell)
+### 8. Cleanup Instructions (Powershell)
     # 1. Delete WordPress stack
     aws cloudformation delete-stack --stack-name wordpress-app
     aws cloudformation wait stack-delete-complete --stack-name wordpress-app
@@ -259,7 +250,7 @@ Infrastructure Components
     aws cloudformation delete-stack --stack-name wordpress-vpc
     aws cloudformation wait stack-delete-complete --stack-name wordpress-vpc
 
-### 11. Create an Amazon EC2 Instance
+### 9. Create an Amazon EC2 Instance
 
 
     
