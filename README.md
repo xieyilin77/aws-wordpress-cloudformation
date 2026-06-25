@@ -30,18 +30,6 @@ The implementation is divided into three phases:
 
 ## Architecture Diagram
 
-                Internet
-                    |
-              Internet Gateway
-                    |
-        ---------------------------
-        |                         |
-  Public Subnet 1         Public Subnet 2
-   (Web Server)            (Load Balancer)
-
-        |                         |
-   Private Subnet 1        Private Subnet 2
-   (DB / Backend)          (DB / Backend)
 
 ## Prerequisites:
 
@@ -93,6 +81,43 @@ The implementation is divided into three phases:
 Build the networking foundation required for the WordPress environment.
 
 ### Implemented Components
+
+                    Internet
+                        |
+                Internet Gateway
+                        |
+            ---------------------------
+            |                         |
+    Public Subnet 1         Public Subnet 2
+    (Web Server)            (Load Balancer)
+
+            |                         |
+    Private Subnet 1        Private Subnet 2
+    (DB / Backend)          (DB / Backend)
+
+
+    aws-wordpress-cloudformation/
+    │
+    ├── templates/
+    │   ├── network.yaml
+    │   └── security-groups.yaml
+    │
+    ├── parameters/
+    │   ├── network-parameters.json
+    │   └── security-group-parameters.json
+    │
+    ├── scripts/
+    │   └── deploy.ps1
+    │
+    └── screenshots/
+        └── phase1
+            ├── vpc.png
+            ├── VPC with subnets.png
+            ├── Security-Groups.png
+            ├── Internet-Gateway.pngg
+            ├── Subnet-Associations.png
+            ├── Route-Tables.png
+            └── Subnets.png  
 
 #### Task 1: Virtual Private Cloud (VPC)
 
@@ -219,7 +244,28 @@ Deploy Security Groups Stack:
     # List all security groups in the VPC
     aws ec2 describe-security-groups --filters "Name=vpc-id,Values=$VPC_ID" `
     --query "SecurityGroups[*].[GroupName,GroupId,Description]" --output table
-    
+
+###### Deployment with script:
+
+-  deploy.ps1: deploys two CloudFormation stacks 
+
+        # network infrastructure
+        wordpress-network
+        ├─ VPC
+        ├─ Public Subnets
+        ├─ Private Subnets
+        └─ Route Tables
+
+        # security groups
+        wordpress-security
+        └─ Security Groups
+
+        #Result:
+        - VPC
+        - Public Subnets
+        - Private Subnets
+        - Route Tables
+        - Security Groups 
 
 ##### Validation
 
@@ -237,7 +283,7 @@ Deploy Security Groups Stack:
 - Subnet-Associations
 - VPC with Subnets
 - Route-Tables
-- Security 
+- Security-Groups
 
 ---
 
@@ -246,6 +292,25 @@ Deploy Security Groups Stack:
 Deploy and automatically configure a WordPress server using CloudFormation.
 
 ### Implemented Components
+
+aws-wordpress-cloudformation/
+    │
+    ├── templates/
+    │   ├── network-security.yaml
+    │   └── wordpress-server.yaml
+    │
+    ├── parameters/
+    │   ├── network-parameters.json
+    │   └── wordpress-server-parameters.json
+    │
+    ├── scripts/
+    │   └── deploywordpress.ps1
+    │
+    └── screenshots/
+        ├── Cloudformation-Stack.png
+        ├── EC2-Instance.png
+        ├── Security-ssh-access.png
+        └── Subnets.png
 
 #### Task 3: EC2 Instance Deployment
 
@@ -280,6 +345,30 @@ UserData performs:
 - Service Configuration
 - Service Startup
 
+###### Deployment with script:
+
+-  deploywordpress.ps1: deploys a network stack and a server stack
+
+        # wordwordpress-network-security
+        ├─ VPC
+        ├─ Public Subnets
+        ├─ Private Subnets
+        ├─ Route Tables
+        └─ Security Groups
+       
+        # wordpress-server
+        ├─ EC2 Instance
+        ├─ WordPress Installation
+        ├─ EBS Volume (if configured)
+        └─ Public IP Address
+
+        Deployment Flow
+        1. Deploy network and security resources.
+        2. Verify deployment success.
+        3. Deploy the WordPress server.
+        4. Verify deployment success.
+        5. Display stack outputs, including the public IP address.
+
 ##### Validation
 
 - EC2 instance running
@@ -289,6 +378,7 @@ UserData performs:
 ##### Screenshots
 
 - EC2 Instance
+- Security-ssh-access
 - Apache Running
 - WordPress Installation
 - CloudFormation Stack
