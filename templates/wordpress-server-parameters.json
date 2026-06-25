@@ -2,7 +2,7 @@
   {
     "ParameterKey": "EnvironmentName",
     "ParameterValue": "wordpress"
-  }
+  },
   {
     "ParameterKey": "KeyPairName",
     "ParameterValue": "vockey"
