@@ -125,22 +125,22 @@ Allowed:
 ###### Before deploying, you need:
 
 ✔ AWS CLI installed
-aws --version
+- aws --version
 
 ✔ AWS configured
-aws configure
+- aws configure
 
 You enter:
-Access Key
-Secret Key
-Region (e.g. us-west-2)
-Output format (json)
+- Access Key
+- Secret Key
+- Region (e.g. us-west-2)
+- Output format (json)
 
 ###### Deployment with AWS CLI:
 
 Deploy VPC stack:
 
-    Deploy VPC stack: automatically creates the AWS resources defined therein (VPC, subnets, etc.).
+    #Deploy VPC stack: automatically creates the AWS resources defined therein (VPC, subnets, etc.).
     aws cloudformation create-stack `
     --stack-name wordpress-vpc `
     --template-body file://templates/vpc.yaml `
