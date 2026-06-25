@@ -2,53 +2,52 @@
 
 ## Project Overview
 
-Design, deploy, and document a highly available AWS infrastructure using AWS CloudFormation and Infrastructure as Code (IaC) principles.
+This project demonstrates the deployment of a highly available WordPress environment on AWS using Infrastructure as Code (IaC) with AWS CloudFormation.
 
-## Infrastructure Overview
+The implementation is divided into three phases:
 
-The deployed AWS infrastructure includes:
+### Phase 1
+- VPC
+- Public Subnets
+- Private Subnets
+- Internet Gateway
+- Route Tables
+- Security Groups
 
-- Custom Virtual Private Cloud (VPC)
-- 2 Public Subnets across multiple Availability Zones
-- 2 Private Subnets across multiple Availability Zones
-- Internet Gateway (IGW)
-- Public and Private Route Tables
-- Route Table Associations
-- Web Server Security Group (HTTP, HTTPS, SSH)
-- Database Security Group (MySQL access from Web Server only)
-- Amazon EC2 instance hosting WordPress
-- Automated server configuration using CloudFormation UserData
-- Apache Web Server installation and configuration
-- PHP installation and configuration
-- Automatic WordPress download and deployment
-- Infrastructure deployment through AWS CloudFormation templates
-- Reproducible Infrastructure as Code (IaC) implementation
+### Phase 2
+- EC2 Deployment
+- Apache Installation
+- PHP Installation
+- WordPress Deployment
+- CloudFormation UserData Automation
 
-## Key Deliverables
-Infrastructure Components
-- Network: VPC with 2 Public + 2 Private Subnets, Internet Gateway, Route Tables
-- Security: Security Groups with appropriate inbound/outbound rules
-- Compute: Auto Scaling Group with WordPress EC2 instances
-- Database: Multi-AZ RDS MySQL
+### Phase 3
+- Application Load Balancer (ALB)
+- Launch Template
+- Auto Scaling Group
+- CloudWatch Alarms
+- Dynamic Scaling Policies
 
-### Key Features
+## Architecture Diagram
 
-- Fully automated infrastructure deployment
-- Infrastructure as Code (IaC) approach
-- Multi-AZ network design
-- Secure network segmentation using Security Groups
-- Automated WordPress server provisioning
-- Cost-effective deployment within AWS Sandbox environment
+                Internet
+                    |
+              Internet Gateway
+                    |
+        ---------------------------
+        |                         |
+  Public Subnet 1         Public Subnet 2
+   (Web Server)            (Load Balancer)
 
-### Documentation
+        |                         |
+   Private Subnet 1        Private Subnet 2
+   (DB / Backend)          (DB / Backend)
 
-- CloudFormation Templates (YAML)
-- Architecture Diagram
-- README.md with complete deployment guide
-- Screenshots of all resources
-- Validation evidence
-- Cleanup instructions
-- Project summary
+## Prerequisites:
+
+- Account with appropriate permissions
+- AWS CLI installed and configured
+- VS Code with AWS Toolkit extension (optional)
 
 ## Repository Structure
 
@@ -87,47 +86,81 @@ Infrastructure Components
     │
     └── README.md
 
-## Prerequisites:
-- Account with appropriate permissions
-- AWS CLI installed and configured
-- VS Code with AWS Toolkit extension (optional)
-- IAM User with CloudFormation full access
+---
 
-## Quick Start Guide
+## Phase 1 – Network Infrastructure
 
-### 1. AWS account and access credentials
-    # Check if AWS CLI is installed
-    aws --version
-    # Configure AWS CLI (if not already done)
-    aws configure
+Build the networking foundation required for the WordPress environment.
 
-### 2. Creating cloudFormation templates
-    - vpc.yaml
-    - security-groups.yaml
-    - wordpress-server.yaml
+### Implemented Components
 
-### 3. Deployment with AWS CLI
-    - Deploy VPC stack: automatically creates the AWS resources defined therein (VPC, subnets, etc.).
-        aws cloudformation create-stack `
-        --stack-name wordpress-vpc `
-        --template-body file://templates/vpc.yaml `
-        --parameters file://templates/vpc-parameters.
-        
-        aws cloudformation wait stack-create-complete --stack-name wordpress-vpc
+#### Task 1: Virtual Private Cloud (VPC)
 
-        aws cloudformation describe-stacks --stack-name wordpress-vpc --query "Stacks[0].StackStatus"
+- VPC (10.0.0.0/16)
+- 2 Public Subnets
+    - wordpress-public-subnet1 (10.0.1.0/24 | us-west-2a)
+    - wordpress-public-subnet2 (10.0.2.0/24 | us-west-2b)
+- 2 Private Subnets
+    - wordpress-private-subnet1 (10.0.3.0/24 | us-west-2a)
+    - wordpress-private-subnet2 (10.0.4.0/24 | us-west-2b)
+- Internet Gateway
+- Route Tables
+- Route Table Associations
 
-### 4. Deploy the VPC stack
-    # Retrieve VPC ID
+#### Task 2: Security Groups
+
+##### WebServerSG
+
+Allowed:
+- SSH (22)
+- HTTP (80)
+- HTTPS (443)
+
+##### DatabaseSG
+
+- MySQL (3306) from WebServerSG only
+
+##### Deployment
+
+###### Before deploying, you need:
+
+✔ AWS CLI installed
+aws --version
+
+✔ AWS configured
+aws configure
+
+You enter:
+Access Key
+Secret Key
+Region (e.g. us-west-2)
+Output format (json)
+
+###### Deployment with AWS CLI:
+
+Deploy VPC stack:
+
+    Deploy VPC stack: automatically creates the AWS resources defined therein (VPC, subnets, etc.).
+    aws cloudformation create-stack `
+    --stack-name wordpress-vpc `
+    --template-body file://templates/vpc.yaml `
+    --parameters file://templates/vpc-parameters.
+
+    # Wait until the stack is created       
+    aws cloudformation wait stack-create-complete --stack-name wordpress-vpc
+
+    # Check status
+    aws cloudformation describe-stacks --stack-name wordpress-vpc --query "Stacks[0].StackStatus"
+
+    # Retrieve VPC ID:
     $VPC_ID = aws cloudformation describe-stacks `
     --stack-name wordpress-vpc `
     --query "Stacks[0].Outputs[?OutputKey=='VPC'].OutputValue" `
     --output text
 
-    Write-Host "VPC ID: $VPC_ID" -ForegroundColor Green
-
     # Show all subnets
-    aws ec2 describe-subnets --filters "Name=vpc-id,Values=$VPC_ID" --query "Subnets[*].[SubnetId,CidrBlock,AvailabilityZone]" --output table
+    aws ec2 describe-subnets --filters "Name=vpc-id,Values=$VPC_ID" `
+    --query "Subnets[*].[SubnetId,CidrBlock,AvailabilityZone]" --output table
         -----------------------------------------------------------
         |                     DescribeSubnets                     |
         +---------------------------+---------------+-------------+
@@ -136,20 +169,23 @@ Infrastructure Components
         |  subnet-0300f2c293b238c4d |  10.0.2.0/24  |  us-west-2b |
         |  subnet-0b84d687992d9d68a |  10.0.3.0/24  |  us-west-2a |
         +---------------------------+---------------+-------------+
-    
+
     # Check Internet Gateway
-    aws ec2 describe-internet-gateways --filters "Name=attachment.vpc-id,Values=$VPC_ID" --query "InternetGateways[*].[InternetGatewayId]" --output table
+    aws ec2 describe-internet-gateways `
+    --filters "Name=attachment.vpc-id,Values=$VPC_ID" `
+    --query "InternetGateways[*].[InternetGatewayId]" --output table
         ---------------------------
         |DescribeInternetGateways |
         +-------------------------+
         |  igw-0e3dadf16d03f8439  |
         +-------------------------+
-
+    
     # Check route tables
     aws ec2 describe-route-tables `
     --filters "Name=vpc-id,Values=$VPC_ID" `
     --query "RouteTables[*].[RouteTableId, Associations[0].SubnetId]" `
-    --output table                                                                        
+    --output table     
+        -------------------------------------------------------
         |                 DescribeRouteTables                 |
         +------------------------+----------------------------+
         |  rtb-058bad8d9f15faed9 |  None                      |
@@ -164,93 +200,176 @@ Infrastructure Components
     --query "Stacks[0].Outputs[?OutputKey=='VPC'].OutputValue" `
     --output text
 
-    Write-Host "VPC ID: $VPC_ID" -ForegroundColor Green
+Deploy Security Groups Stack:
 
-### 5. Deploy Security Groups Stack
     # Deploy Security Groups Stack with VPC ID
     aws cloudformation create-stack `
     --stack-name wordpress-security-groups `
     --template-body file://templates/security-groups.yaml `
-    --parameters ParameterKey=EnvironmentName,ParameterValue=wordpress ParameterKey=VPC,ParameterValue=$VPC_ID `
+    --parameters ParameterKey=EnvironmentName,ParameterValue=wordpress ` ParameterKey=VPC,ParameterValue=$VPC_ID `
     --capabilities CAPABILITY_NAMED_IAM
 
     # Wait until the stack is created
-    aws cloudformation wait stack-create-complete --stack-name wordpress-security-groups
+    aws cloudformation wait stack-create-complete `
+    --stack-name wordpress-security-groups
 
     # Check status
-    aws cloudformation describe-stacks --stack-name wordpress-security-groups --query "Stacks[0].StackStatus"
+    aws cloudformation describe-stacks --stack-name wordpress-security-groups ` --query "Stacks[0].StackStatus"
 
-### 6. Verify security groups
     # List all security groups in the VPC
-    aws ec2 describe-security-groups --filters "Name=vpc-id,Values=$VPC_ID" --query "SecurityGroups[*].[GroupName,GroupId,Description]" --output table
-
-    # Show details of a specific security group
-    aws ec2 describe-security-groups --group-ids $(aws cloudformation describe-stacks --stack-name wordpress-security-groups --query "Stacks[0].Outputs[?OutputKey=='EC2SecurityGroup'].OutputValue" --output text) --query "SecurityGroups[0].[IpPermissions, IpPermissionsEgress]" --output json
-    [
-        [
-            {
-                "IpProtocol": "-1",
-                "UserIdGroupPairs": [
-                    {
-                        "UserId": "547224996589",
-                        "GroupId": "sg-0f555552cddc87ad8"
-                    }
-                ],
-                "IpRanges": [],
-                "Ipv6Ranges": [],                                                                                                      
-                "PrefixListIds": []                                                                                                    
-            }                                                                                                                          
-        ],                                                                                                                             
-        [                                                                                                                              
-            {                                                                                                                          
-                "IpProtocol": "-1",                                                                                                    
-                "UserIdGroupPairs": [],
-                "IpRanges": [                                                                                                          
-                    {                                                                                                                  
-                        "CidrIp": "0.0.0.0/0"                                                                                          
-                    }                                                                                                                  
-                ],                                                                                                                     
-                "Ipv6Ranges": [],                                                                                                      
-                "PrefixListIds": []                                                                                                    
-            }                                                                                                                          
-        ]                                                                                                                              
-    ]                                                                                                
-
-#### Deploy with deploy.ps1
-    # Output: 
-        Deploying Network Stack...
-        Waiting for changeset to be created..
-        Waiting for stack create/update to complete
-        Successfully created/updated stack - wordpress-network
-        Network Stack Finished.
-        Deploying Security Group Stack...
-        Waiting for changeset to be created..
-        Waiting for stack create/update to complete
-        Successfully created/updated stack - wordpress-security
-        Security Group Stack Finished.
-
-### 7. Validation Evidence
-    - scrennshots\VPC with subnets.png
-    - scrennshots\Subnets.png
-    - scrennshots\Subne-Associations.png
-    - scrennshots\Route-Tables.png
-    - scrennshots\Internet-Gateway.png
-    - scrennshots\Security-Group.png
-
-### 8. Cleanup Instructions (Powershell)
-    # 1. Delete WordPress stack
-    aws cloudformation delete-stack --stack-name wordpress-app
-    aws cloudformation wait stack-delete-complete --stack-name wordpress-app
-
-    # 2. Delete Security Groups stack
-    aws cloudformation delete-stack --stack-name wordpress-security-groups
-    aws cloudformation wait stack-delete-complete --stack-name wordpress-security-groups
-
-    # 3. Delete VPC stack
-    aws cloudformation delete-stack --stack-name wordpress-vpc
-    aws cloudformation wait stack-delete-complete --stack-name wordpress-vpc
-
-### 9. Create an Amazon EC2 Instance
-
-
+    aws ec2 describe-security-groups --filters "Name=vpc-id,Values=$VPC_ID" `
+    --query "SecurityGroups[*].[GroupName,GroupId,Description]" --output table
     
+
+##### Validation
+
+- VPC created successfully
+- Subnets created successfully
+- Subnets associated correctly
+- Internet connectivity verified
+- Security Groups configured successfully
+
+##### Screenshots
+
+- VPC
+- Internet-Gateway
+- Subnets
+- Subnet-Associations
+- VPC with Subnets
+- Route-Tables
+- Security 
+
+---
+
+## Phase 2 – WordPress Deployment
+
+Deploy and automatically configure a WordPress server using CloudFormation.
+
+### Implemented Components
+
+#### Task 3: EC2 Instance Deployment
+
+- Amazon Linux 2
+- t2.micro
+- Public Subnet
+- Public IP Enabled
+
+#### Task 4: Web Server Configuration
+
+Installed automatically using UserData:
+
+- Apache (httpd)
+- PHP
+- WordPress Dependencies
+
+#### Task 5: WordPress Installation
+
+Automated:
+- Download WordPress
+- Extract Files
+- Configure Apache
+- Configure Permissions
+- Start Services
+
+#### Task 6: CloudFormation Automation
+
+UserData performs:
+- Apache Installation
+- PHP Installation
+- WordPress Download
+- Service Configuration
+- Service Startup
+
+##### Validation
+
+- EC2 instance running
+- Apache accessible
+- WordPress installation page displayed
+
+##### Screenshots
+
+- EC2 Instance
+- Apache Running
+- WordPress Installation
+- CloudFormation Stack
+
+---
+
+## Phase 3 – High Availability Architecture
+
+Implement scalability and high availability using AWS Auto Scaling and Load Balancer services.
+
+### Implemented Components
+
+#### Task 7: Application Load Balancer
+
+- Internet-facing ALB
+- Multi-AZ deployment
+- Listener
+- Target Group
+
+#### Task 8: Launch Template
+
+Includes:
+- Amazon Linux
+- UserData Automation
+- Security Group Configuration
+
+#### Task 9: Auto Scaling Group
+
+- Minimum: 2
+- Desired: 2
+- Maximum: 4
+
+#### Task 10: ALB Integration
+
+- Target Group Registration
+- Health Checks
+- Traffic Distribution
+
+##### Task 11: Dynamic Scaling Policies
+
+Scale-Out:
+- CPU > 70%
+
+Scale-In:
+- CPU < 30%
+
+##### Validation
+
+- ALB DNS accessible
+- Healthy Targets
+- Instance replacement successful
+- Scaling policies working
+
+##### Screenshots
+
+- Load Balancer
+- Target Group
+- Auto Scaling Group
+- CloudWatch Alarms
+- Scaling Test
+
+---
+
+## Deployment Steps
+
+1. Deploy Network Stack
+2. Deploy WordPress Stack
+3. Deploy ALB and Auto Scaling Stack
+4. Verify Infrastructure
+
+## Validation Steps
+
+- Verify VPC Resources
+- Verify EC2 Instance
+- Verify WordPress Accessibility
+- Verify ALB Functionality
+- Verify Auto Scaling Behaviour
+
+## Cleanup
+
+Delete stacks in the following order:
+1. autoscaling-alb
+2. wordpress-server
+3. network-security
