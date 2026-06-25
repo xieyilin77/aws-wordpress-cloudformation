@@ -1,8 +1,93 @@
 # aws-wordpress-cloudformation
 
-# Key Features
-  > Cloudformation
+## Project Overview
 
+Design, deploy, and document a highly available AWS infrastructure using AWS CloudFormation and Infrastructure as Code (IaC) principles.
+
+## Infrastructure Overview
+
+The deployed AWS infrastructure includes:
+
+- Custom Virtual Private Cloud (VPC)
+- 2 Public Subnets across multiple Availability Zones
+- 2 Private Subnets across multiple Availability Zones
+- Internet Gateway (IGW)
+- Public and Private Route Tables
+- Route Table Associations
+- Web Server Security Group (HTTP, HTTPS, SSH)
+- Database Security Group (MySQL access from Web Server only)
+- Amazon EC2 instance hosting WordPress
+- Automated server configuration using CloudFormation UserData
+- Apache Web Server installation and configuration
+- PHP installation and configuration
+- Automatic WordPress download and deployment
+- Infrastructure deployment through AWS CloudFormation templates
+- Reproducible Infrastructure as Code (IaC) implementation
+
+## Key Deliverables
+Infrastructure Components
+Network: VPC with 2 Public + 2 Private Subnets, Internet Gateway, Route Tables
+Security: Security Groups with appropriate inbound/outbound rules
+Compute: Auto Scaling Group with WordPress EC2 instances
+Database: Multi-AZ RDS MySQL
+Storage: EFS (shared content) + S3 (media files)
+Load Balancing: Application Load Balancer (ALB)
+
+### Key Features
+
+- Fully automated infrastructure deployment
+- Infrastructure as Code (IaC) approach
+- Multi-AZ network design
+- Secure network segmentation using Security Groups
+- Automated WordPress server provisioning
+- Cost-effective deployment within AWS Sandbox environment
+
+### Documentation
+
+✅ CloudFormation Templates (YAML)
+✅ Architecture Diagram
+✅ README.md with complete deployment guide
+✅ Screenshots of all resources
+✅ Validation evidence
+✅ Cleanup instructions
+✅ Project summary
+
+## Repository Structure
+
+    aws-wordpress-cloudformation/
+    │
+    ├── templates/
+    │   ├── network.yaml
+    │   ├── security-groups.yaml
+    │   ├── network-security.yaml
+    │   └── wordpress-server.yaml
+    │
+    ├── parameters/
+    │   ├── network-parameters.json
+    │   ├── security-group-parameters.json
+    │   └── wordpress-server-parameters.json
+    │
+    ├── scripts/
+    │   ├── deploy.ps1
+    │   └── deploywordpress.ps1
+    │
+    ├── screenshots/
+    │   ├── Cloudformation-Stack.png
+    │   ├── vpc.png
+    │   ├── VPC with subnets.png
+    │   ├── Security-Groups.png
+    │   ├── EC2-Instance.png
+    │   ├── Internet-Gateway.png
+    │   ├── Security-ssh-access.png
+    │   ├── Subnet-Associations.png
+    │   ├── Route-Tables.png
+    │   └── Subnets.png
+    │
+    ├── docs/
+    │   ├── architecture-diagram.png
+    │   └── deployment-guide.md
+    │
+    └── README.md
 # Prerequisites:
 - Account with appropriate permissions
 - AWS CLI installed and configured
