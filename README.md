@@ -26,12 +26,10 @@ The deployed AWS infrastructure includes:
 
 ## Key Deliverables
 Infrastructure Components
-Network: VPC with 2 Public + 2 Private Subnets, Internet Gateway, Route Tables
-Security: Security Groups with appropriate inbound/outbound rules
-Compute: Auto Scaling Group with WordPress EC2 instances
-Database: Multi-AZ RDS MySQL
-Storage: EFS (shared content) + S3 (media files)
-Load Balancing: Application Load Balancer (ALB)
+- Network: VPC with 2 Public + 2 Private Subnets, Internet Gateway, Route Tables
+- Security: Security Groups with appropriate inbound/outbound rules
+- Compute: Auto Scaling Group with WordPress EC2 instances
+- Database: Multi-AZ RDS MySQL
 
 ### Key Features
 
@@ -44,13 +42,13 @@ Load Balancing: Application Load Balancer (ALB)
 
 ### Documentation
 
-✅ CloudFormation Templates (YAML)
-✅ Architecture Diagram
-✅ README.md with complete deployment guide
-✅ Screenshots of all resources
-✅ Validation evidence
-✅ Cleanup instructions
-✅ Project summary
+- CloudFormation Templates (YAML)
+- Architecture Diagram
+- README.md with complete deployment guide
+- Screenshots of all resources
+- Validation evidence
+- Cleanup instructions
+- Project summary
 
 ## Repository Structure
 
@@ -88,7 +86,8 @@ Load Balancing: Application Load Balancer (ALB)
     │   └── deployment-guide.md
     │
     └── README.md
-# Prerequisites:
+
+## Prerequisites:
 - Account with appropriate permissions
 - AWS CLI installed and configured
 - VS Code with AWS Toolkit extension (optional)
