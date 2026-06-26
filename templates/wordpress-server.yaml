@@ -13,6 +13,7 @@ Parameters:
     AmazonLinuxAMIID:
         Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
         Default: /aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2
+        Description: AMI ID for Amazon Linux 2
 
 Resources:
 
@@ -25,68 +26,185 @@ Resources:
             KeyName: !Ref KeyPairName
 
             SubnetId:
-                Fn::ImportValue: wordpress-PublicSubnet1
+                Fn::ImportValue: !Sub '${EnvironmentName}-PublicSubnet1'
 
             SecurityGroupIds:
-                - Fn::ImportValue: wordpress-WebServerSG
+                - Fn::ImportValue: !Sub '${EnvironmentName}-WebServerSG'
 
             Tags:
                 - Key: Name
-                  Value: wordpress-server
+                  Value: !Sub '${EnvironmentName}-server'
 
             UserData:
                 Fn::Base64: !Sub |
                     #!/bin/bash
+                    set -euxo pipefail
 
+                    # =========================
+                    # 1. System Update
+                    # =========================
                     yum update -y
 
-                    yum install -y httpd wget unzip
+                    # =========================
+                    # 2. Install Apache & Utilities
+                    # =========================
+                    yum install -y httpd wget unzip curl
 
-                    amazon-linux-extras enable php8.2
-
+                    # =========================
+                    # 3. Install PHP 7.4
+                    # =========================
+                    amazon-linux-extras enable php7.4
                     yum clean metadata
+                    yum install -y php php-cli php-mysqlnd php-gd php-mbstring php-xml php-json php-fpm php-curl php-zip
 
-                    yum install -y php php-mysqlnd
+                    # =========================
+                    # 4. Install MariaDB
+                    # =========================
+                    yum install -y mariadb-server
 
+                    # =========================
+                    # 5. Start & Enable Services
+                    # =========================
                     systemctl start httpd
                     systemctl enable httpd
 
-                    echo "Apache is working" > /var/www/html/health.html
+                    systemctl start mariadb
+                    systemctl enable mariadb
 
+                    # =========================
+                    # 6. Secure MariaDB
+                    # =========================
+                    mysql -e "UPDATE mysql.user SET Password=PASSWORD('StrongRootPass123!') WHERE User='root';"
+                    mysql -e "DELETE FROM mysql.user WHERE User='';"
+                    mysql -e "DROP DATABASE IF EXISTS test;"
+                    mysql -e "DELETE FROM mysql.db WHERE Db='test' OR Db='test\\_%';"
+                    mysql -e "FLUSH PRIVILEGES;"
+
+                    # =========================
+                    # 7. Create WordPress Database & User
+                    # =========================
+                    mysql -uroot -pStrongRootPass123! -e "
+                    CREATE DATABASE wordpress_db;
+                    CREATE USER 'wp_user'@'localhost' IDENTIFIED BY 'YourStrongPassword123!';
+                    GRANT ALL PRIVILEGES ON wordpress_db.* TO 'wp_user'@'localhost';
+                    FLUSH PRIVILEGES;
+                    "
+
+                    # =========================
+                    # 8. WordPress Installation only in /wordpress
+                    # =========================
+                    mkdir -p /var/www/html/wordpress
+                    
                     cd /tmp
-
                     wget https://wordpress.org/latest.tar.gz
-
                     tar -xzf latest.tar.gz
+                    cp -r wordpress/* /var/www/html/wordpress/
+                    rm -rf wordpress latest.tar.gz
 
-                    cp -r wordpress/* /var/www/html/
+                    # =========================
+                    # 9. Configure wp-config.php
+                    # =========================
+                    cd /var/www/html/wordpress
+                    cp wp-config-sample.php wp-config.php
 
-                    chown -R apache:apache /var/www/html
+                    sed -i "s/database_name_here/wordpress_db/" wp-config.php
+                    sed -i "s/username_here/wp_user/" wp-config.php
+                    sed -i "s/password_here/YourStrongPassword123!/" wp-config.php
 
-                    chmod -R 755 /var/www/html
+                    # WordPress Salts
+                    SALTS=$(curl -s https://api.wordpress.org/secret-key/1.1/salt/)
+                    sed -i "/AUTH_KEY/d" wp-config.php
+                    sed -i "/SECURE_AUTH_KEY/d" wp-config.php
+                    sed -i "/LOGGED_IN_KEY/d" wp-config.php
+                    sed -i "/NONCE_KEY/d" wp-config.php
+                    sed -i "/AUTH_SALT/d" wp-config.php
+                    sed -i "/SECURE_AUTH_SALT/d" wp-config.php
+                    sed -i "/LOGGED_IN_SALT/d" wp-config.php
+                    sed -i "/NONCE_SALT/d" wp-config.php
+                    printf "%s\n" "$SALTS" >> wp-config.php
 
+                    # =========================
+                    # 10. WordPress as Home URL
+                    # =========================
+                    sed -i "/^\/\* That's all, stop editing! /i define('WP_HOME', 'http://' . \$_SERVER['HTTP_HOST'] . '/wordpress');" wp-config.php
+                    sed -i "/^\/\* That's all, stop editing! /i define('WP_SITEURL', 'http://' . \$_SERVER['HTTP_HOST'] . '/wordpress');" wp-config.php
+
+                    # =========================
+                    # 11. Permissions
+                    # =========================
+                    chown -R apache:apache /var/www/html/wordpress
+                    chmod -R 755 /var/www/html/wordpress
+
+                    # =========================
+                    # 12. Apache Virtual Host
+                    # =========================
+                    cat > /etc/httpd/conf.d/wordpress.conf << 'EOF'
+                    <VirtualHost *:80>
+                        DocumentRoot /var/www/html/wordpress
+                        <Directory /var/www/html/wordpress>
+                            Options Indexes FollowSymLinks
+                            AllowOverride All
+                            Require all granted
+                        </Directory>
+                    </VirtualHost>
+                    EOF
+
+                    # =========================
+                    # 13. Apache AllowOverride
+                    # =========================
+                    sed -i 's/AllowOverride None/AllowOverride All/g' /etc/httpd/conf/httpd.conf
+
+                    # =========================
+                    # 14. Health Check
+                    # =========================
+                    echo "Apache is working" > /var/www/html/wordpress/health.html
+
+                    # =========================
+                    # 15. .htaccess for Permalinks
+                    # =========================
+                    cat > /var/www/html/wordpress/.htaccess << 'EOF'
+                    # BEGIN WordPress
+                    <IfModule mod_rewrite.c>
+                    RewriteEngine On
+                    RewriteBase /wordpress/
+                    RewriteRule ^index\.php$ - [L]
+                    RewriteCond %{REQUEST_FILENAME} !-f
+                    RewriteCond %{REQUEST_FILENAME} !-d
+                    RewriteRule . /wordpress/index.php [L]
+                    </IfModule>
+                    # END WordPress
+                    EOF
+
+                    # =========================
+                    # 16. Restart Apache
+                    # =========================
                     systemctl restart httpd
 
+                    # =========================
+                    # 17. Ends
+                    # =========================
+                    echo "========================================="
+                    echo "WordPress installation completed!"
+                    echo "Access: http://$(curl -s http://169.254.169.254/latest/meta-data/public-ipv4)/wordpress/"
+                    echo "========================================="
 Outputs:
 
-  InstanceId:
-    Description: EC2 Instance ID
-    Value: !Ref WordPressInstance
+    InstanceId:
+        Description: EC2 Instance ID
+        Value: !Ref WordPressInstance
 
 
-  PublicIP:
-    Description: Public IP Address
-    Value: !GetAtt WordPressInstance.PublicIp
+    PublicIP:
+        Description: Public IP Address
+        Value: !GetAtt WordPressInstance.PublicIp
 
 
-  PublicDNS:
-    Description: Public DNS Name
-    Value: !GetAtt WordPressInstance.PublicDnsName
+    PublicDNS:
+        Description: Public DNS Name
+        Value: !GetAtt WordPressInstance.PublicDnsName
 
 
-  WordPressURL:
-    Description: WordPress Website URL
-    Value: !Sub 
-      - "http://${PublicIP}"
-      - PublicIP: !GetAtt WordPressInstance.PublicIp
-       
+    WordPressURL:
+        Description: WordPress Website URL
+        Value: !Sub "http://${WordPressInstance.PublicIp}/wordpress/"
+        

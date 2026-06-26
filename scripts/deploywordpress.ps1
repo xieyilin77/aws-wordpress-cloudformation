@@ -57,7 +57,26 @@ Write-Host "Getting Public IP"
 Write-Host "===================================="
 Write-Host ""
 
-aws cloudformation describe-stacks `
+# Stack-Outputs abrufen
+$outputs = aws cloudformation describe-stacks `
 --stack-name $ServerStack `
 --query "Stacks[0].Outputs" `
---output table
+--output json | ConvertFrom-Json
+
+$publicIP = ($outputs | Where-Object { $_.OutputKey -eq "PublicIP" }).OutputValue
+$wordpressURL = ($outputs | Where-Object { $_.OutputKey -eq "WordPressURL" }).OutputValue
+
+Write-Host "✅ Public IP: $publicIP" -ForegroundColor Green
+Write-Host "✅ WordPress URL: $wordpressURL" -ForegroundColor Green
+Write-Host ""
+
+Write-Host "===================================="
+Write-Host "Deployment Summary"
+Write-Host "===================================="
+Write-Host ""
+Write-Host "WordPress URL: $wordpressURL" -ForegroundColor Cyan
+Write-Host "SSH Command: ssh -i vockey.pem ec2-user@$publicIP" -ForegroundColor Green
+Write-Host ""
+
+Write-Host "WordPress might take a few minutes to be fully ready..." -ForegroundColor Yellow
+Write-Host "Check Apache status: sudo systemctl status httpd" -ForegroundColor Yellow
