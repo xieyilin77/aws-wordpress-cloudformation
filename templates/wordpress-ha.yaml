@@ -47,7 +47,10 @@ Resources:
         Type: AWS::EC2::SecurityGroup
         Properties:
             GroupDescription: Security Group for ALB
-            VpcId: !ImportValue wordpress-VPC
+            VpcId:
+                Fn::ImportValue:
+                    Fn::Sub: "${EnvironmentName}-VPC"
+
             SecurityGroupIngress:
                 - IpProtocol: tcp
                   FromPort: 80
@@ -76,7 +79,9 @@ Resources:
             Name: !Sub '${EnvironmentName}-wordpress-tg'
             Port: 80
             Protocol: HTTP
-            VpcId: !ImportValue wordpress-VPC
+            VpcId:
+                Fn::ImportValue:
+                    Fn::Sub: "${EnvironmentName}-VPC"
             HealthCheckPath: /health.html
             HealthCheckIntervalSeconds: 30
             HealthCheckTimeoutSeconds: 5
@@ -100,8 +105,10 @@ Resources:
             SecurityGroups:
                 - !Ref LoadBalancerSG
             Subnets:
-                - !ImportValue wordpress-PublicSubnet1
-                - !ImportValue wordpress-PublicSubnet2
+                - Fn::ImportValue:
+                    Fn::Sub: "${EnvironmentName}-PublicSubnet1"
+                - Fn::ImportValue:
+                    Fn::Sub: "${EnvironmentName}-PublicSubnet2"
             Tags:
                 - Key: Name
                   Value: !Sub '${EnvironmentName}-alb'

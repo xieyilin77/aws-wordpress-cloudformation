@@ -12,6 +12,8 @@ Write-Host "Phase 2: WordPress Server Deployment" -ForegroundColor Cyan
 Write-Host "====================================" -ForegroundColor Cyan
 Write-Host ""
 
+# 1. Network Stack deployen
+Write-Host "Deploying Network Stack..." -ForegroundColor Yellow
 aws cloudformation deploy `
 --stack-name $NetworkStack `
 --template-file ../templates/network-security.yaml `
@@ -33,7 +35,7 @@ Write-Host ""
 Write-Host "Network Stack deployed successfully."
 Write-Host ""
 
-Write-Host ""
+# 2. WordPress Stack deployen
 Write-Host "===================================="
 Write-Host "Deploying WordPress Stack"
 Write-Host "===================================="
@@ -45,7 +47,8 @@ aws cloudformation deploy `
 --parameter-overrides `
 EnvironmentName=$Environment `
 KeyPairName=vockey `
---no-fail-on-empty-changeset
+--no-fail-on-empty-changeset `
+--capabilities CAPABILITY_IAM
 
 if ($LASTEXITCODE -ne 0) {
     Write-Host "WordPress deployment failed."

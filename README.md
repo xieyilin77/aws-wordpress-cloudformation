@@ -77,12 +77,14 @@ The implementation is divided into three phases:
     │   └── phase3/
     │       ├── deploy-phase3.png
     │       ├── Formation-Stack2.png
+    │       ├── CloudFormation-Stack-Status-Check.png
     │       ├── alb-configuration1.png
     │       ├── alb-configuration2.png
     │       ├── alb-configuration3.png
     │       ├── Apache-is-working.png
     │       ├── listener-configuration.png
     │       ├── target-group.png
+    │       ├── Target-Group-Health-Check.png
     │       ├── launch-template.png
     │       ├── auto-scaling-group.png
     │       ├── running-instances.png

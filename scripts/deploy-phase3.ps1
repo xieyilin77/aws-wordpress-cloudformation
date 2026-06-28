@@ -26,10 +26,17 @@ if ($LASTEXITCODE -ne 0) {
         PublicSubnet1CIDR=10.0.1.0/24 `
         PublicSubnet2CIDR=10.0.2.0/24 `
         PrivateSubnet1CIDR=10.0.3.0/24 `
-        PrivateSubnet2CIDR=10.0.4.0/24
-}
+        PrivateSubnet2CIDR=10.0.4.0/24 `
+        --no-fail-on-empty-changeset
 
-Write-Host "✅ Network Stack found!" -ForegroundColor Green
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "❌ Network Stack deployment failed!" -ForegroundColor Red
+        exit 1
+    }
+    Write-Host "✅ Network Stack deployed successfully!" -ForegroundColor Green
+} else {
+    Write-Host "✅ Network Stack found!" -ForegroundColor Green
+}
 Write-Host ""
 
 # Deploy HA Stack
@@ -37,17 +44,16 @@ Write-Host " Deploying High Availability Stack..." -ForegroundColor Yellow
 Write-Host ""
 
 aws cloudformation deploy `
---stack-name $HAStack `
---template-file ../templates/wordpress-ha.yaml `
---parameter-overrides `
-EnvironmentName=$Environment `
-KeyPairName=vockey `
-MinSize=2 `
-DesiredCapacity=2 `
-MaxSize=4 `
-InstanceType=t2.micro `
---capabilities CAPABILITY_IAM `
---no-fail-on-empty-changeset
+    --stack-name $HAStack `
+    --template-file ../templates/wordpress-ha.yaml `
+    --parameter-overrides `
+        EnvironmentName=$Environment `
+        KeyPairName=vockey `
+        MinSize=2 `
+        DesiredCapacity=2 `
+        MaxSize=4 `
+        InstanceType=t2.micro `
+    --capabilities CAPABILITY_IAM
 
 if ($LASTEXITCODE -ne 0) {
     Write-Host " HA Stack deployment failed!" -ForegroundColor Red
