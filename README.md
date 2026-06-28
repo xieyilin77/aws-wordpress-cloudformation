@@ -42,37 +42,56 @@ The implementation is divided into three phases:
     aws-wordpress-cloudformation/
     │
     ├── templates/
-    │   ├── network.yaml
-    │   ├── security-groups.yaml
-    │   ├── network-security.yaml
-    │   └── wordpress-server.yaml
-    │
-    ├── parameters/
-    │   ├── network-parameters.json
-    │   ├── security-group-parameters.json
-    │   └── wordpress-server-parameters.json
+    │   ├── network.yaml                     (Phase 1 - optional)
+    │   ├── security-groups.yaml             (Phase 1 - optional)
+    │   ├── network-security.yaml            ✅ Phase 1 - Haupttemplate
+    │   ├── wordpress-server.yaml            ✅ Phase 2 - WordPress EC2
+    │   ├── wordpress-ha.yaml                🆕 Phase 3 - ALB + Auto Scaling
+    │   ├── network-parameters.json          (optional)
+    │   ├── security-group-parameters.json   (optional)
+    │   └── wordpress-server-parameters.json ✅ Parameter
     │
     ├── scripts/
-    │   ├── deploy.ps1
-    │   └── deploywordpress.ps1
+    │   ├── deploy.ps1                       (Phase 1 - optional)
+    │   ├── deploy-phase2.ps1                ✅ Phasen 1+2
+    │   ├── deploy-phase3.ps1                🆕 Phase 3
+    │   ├── deploy-all.ps1                   🆕 Alle Phasen
+    │   └── cleanup-all.ps1                  🆕 Aufräumen
     │
-    ├── screenshots/
-    │   ├── Cloudformation-Stack.png
-    │   ├── vpc.png
-    │   ├── VPC with subnets.png
-    │   ├── Security-Groups.png
-    │   ├── EC2-Instance.png
-    │   ├── Internet-Gateway.png
-    │   ├── Security-ssh-access.png
-    │   ├── Subnet-Associations.png
-    │   ├── Route-Tables.png
-    │   └── Subnets.png
+    ├── screenshots/                         
+    │   ├── phase1/
+    │   │   ├── vpc.png
+    │   │   ├── VPC with subnets.png
+    │   │   ├── Security-Groups.png
+    │   │   ├── Internet-Gateway.pngg
+    │   │   ├── Subnet-Associations.png
+    │   │   ├── Route-Tables.png
+    │   │   └── Subnets.png
+    │   ├── phase2/
+    │   │   ├── Cloudformation-Stack.png
+    │   │   ├── EC2-Instance.png
+    │   │   ├── Security-ssh-access.png
+    │   │   ├── Apache-Working.png
+    │   │   ├── Wordpress.png
+    │   │   └── Webserver-Status.png
+    │   └── phase3/
+    │       ├── deploy-phase3.png
+    │       ├── Formation-Stack2.png
+    │       ├── alb-configuration1.png
+    │       ├── alb-configuration2.png
+    │       ├── alb-configuration3.png
+    │       ├── Apache-is-working.png
+    │       ├── listener-configuration.png
+    │       ├── target-group.png
+    │       ├── launch-template.png
+    │       ├── auto-scaling-group.png
+    │       ├── running-instances.png
+    │       ├── target-health.png
+    │       ├── scaling-policies.png
+    │       └── cloudwatch-alarms.png
     │
-    ├── docs/
-    │   ├── architecture-diagram.png
-    │   └── deployment-guide.md
-    │
-    └── README.md
+    └── docs/
+        └── README.md
 
 ---
 
@@ -94,30 +113,6 @@ Build the networking foundation required for the WordPress environment.
             |                         |
     Private Subnet 1        Private Subnet 2
     (DB / Backend)          (DB / Backend)
-
-
-    aws-wordpress-cloudformation/
-    │
-    ├── templates/
-    │   ├── network.yaml
-    │   └── security-groups.yaml
-    │
-    ├── parameters/
-    │   ├── network-parameters.json
-    │   └── security-group-parameters.json
-    │
-    ├── scripts/
-    │   └── deploy.ps1
-    │
-    └── screenshots/
-        └── phase1
-            ├── vpc.png
-            ├── VPC with subnets.png
-            ├── Security-Groups.png
-            ├── Internet-Gateway.pngg
-            ├── Subnet-Associations.png
-            ├── Route-Tables.png
-            └── Subnets.png  
 
 #### Task 1: Virtual Private Cloud (VPC)
 
@@ -168,8 +163,8 @@ Deploy VPC stack:
     #Deploy VPC stack: automatically creates the AWS resources defined therein (VPC, subnets, etc.).
     aws cloudformation create-stack `
     --stack-name wordpress-vpc `
-    --template-body file://templates/vpc.yaml `
-    --parameters file://templates/vpc-parameters.
+    --template-body file://templates/network.yaml `
+    --parameters file://templates/network-parameters.
 
     # Wait until the stack is created       
     aws cloudformation wait stack-create-complete --stack-name wordpress-vpc
@@ -293,25 +288,6 @@ Deploy and automatically configure a WordPress server using CloudFormation.
 
 ### Implemented Components
 
-aws-wordpress-cloudformation/
-    │
-    ├── templates/
-    │   ├── network-security.yaml
-    │   └── wordpress-server.yaml
-    │
-    ├── parameters/
-    │   ├── network-parameters.json
-    │   └── wordpress-server-parameters.json
-    │
-    ├── scripts/
-    │   └── deploywordpress.ps1
-    │
-    └── screenshots/
-        ├── Cloudformation-Stack.png
-        ├── EC2-Instance.png
-        ├── Security-ssh-access.png
-        └── Subnets.png
-
 #### Task 3: EC2 Instance Deployment
 
 - Amazon Linux 2
@@ -324,17 +300,53 @@ aws-wordpress-cloudformation/
 Installed automatically using UserData:
 
 - Apache (httpd)
+    - sudo yum update -y
+    - sudo yum install -y httpd
+    - sudo systemctl start httpd
+    - sudo systemctl enable httpd
+    - sudo systemctl status httpd
+
 - PHP
+    - sudo amazon-linux-extras enable php8.2
+    - sudo yum clean metadata
+    - sudo yum install -y php php-cli php-fpm php-mysqlnd php-json php-gd php-mbstring php-xml php-curl php-zip
+
+- MariaDB
+    - sudo yum install -y mariadb-server
 - WordPress Dependencies
+    - sudo yum install -y wget tar unzip
 
 #### Task 5: WordPress Installation
 
-Automated:
 - Download WordPress
-- Extract Files
-- Configure Apache
+    - cd /tmp
+    - wget https://wordpress.org/latest.tar.gz
+    - tar -xzf latest.tar.gz
+- Deploy WordPress
+    - sudo mkdir -p /var/www/html/wordpress
+    - sudo cp -R wordpress/* /var/www/html/wordpress/
 - Configure Permissions
-- Start Services
+    - sudo chown -R apache:apache /var/www/html/wordpress
+    - sudo chmod -R 755 /var/www/html/wordpress
+- Configure Apache
+    - Created file:
+        /etc/httpd/conf.d/wordpress.conf
+        <VirtualHost *:80>
+            DocumentRoot /var/www/html
+            <Directory /var/www/html>
+                AllowOverride All
+                Require all granted
+            </Directory>
+        </VirtualHost>
+- Restart Apache
+    - sudo systemctl restart httpd
+
+- Validation
+    - Open the following URL: http://<EC2-Public-IP>/wordpress
+        => The WordPress installation page should be displayed.
+
+- Result
+    - WordPress was successfully installed and accessible through the EC2 public IP address.
 
 #### Task 6: CloudFormation Automation
 
@@ -347,7 +359,7 @@ UserData performs:
 
 ###### Deployment with script:
 
--  deploywordpress.ps1: deploys a network stack and a server stack
+-  deploy-phase2.ps1: deploys a network stack and a server stack
 
         # wordwordpress-network-security
         ├─ VPC
@@ -377,11 +389,11 @@ UserData performs:
 
 ##### Screenshots
 
-- EC2 Instance
+- EC2-Instance
 - Security-ssh-access
-- Apache Running
-- WordPress Installation
-- CloudFormation Stack
+- Apache-Working.pngg
+- Wordpress-Installation.png
+- Cloudformation-Stack.png
 
 ---
 
