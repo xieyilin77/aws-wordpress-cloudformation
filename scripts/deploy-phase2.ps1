@@ -1,24 +1,28 @@
-# Deploy Network Stack and WordPress Stack
+# =============================================
+# Phase 2: WordPress Server Deployment mit Validierung
+# =============================================
+
 $NetworkStack = "wordpress-network-security"
 $ServerStack = "wordpress-server"
-$Enviroment = "wordpress"
+$Environment = "wordpress"
 
 Write-Host ""
-Write-Host "===================================="
-Write-Host "Deploying Network Stack"
-Write-Host "===================================="
+Write-Host "====================================" -ForegroundColor Cyan
+Write-Host "Phase 2: WordPress Server Deployment" -ForegroundColor Cyan
+Write-Host "====================================" -ForegroundColor Cyan
 Write-Host ""
 
 aws cloudformation deploy `
 --stack-name $NetworkStack `
 --template-file ../templates/network-security.yaml `
 --parameter-overrides `
-EnvironmentName=$Enviroment `
+EnvironmentName=$Environment `
 VpcCIDR=10.0.0.0/16 `
 PublicSubnet1CIDR=10.0.1.0/24 `
 PublicSubnet2CIDR=10.0.2.0/24 `
 PrivateSubnet1CIDR=10.0.3.0/24 `
-PrivateSubnet2CIDR=10.0.4.0/24
+PrivateSubnet2CIDR=10.0.4.0/24 `
+--no-fail-on-empty-changeset
 
 if ($LASTEXITCODE -ne 0) {
     Write-Host "Network deployment failed."
@@ -39,8 +43,9 @@ aws cloudformation deploy `
 --stack-name $ServerStack `
 --template-file ../templates/wordpress-server.yaml `
 --parameter-overrides `
-EnvironmentName=$Enviroment `
-KeyPairName=vockey
+EnvironmentName=$Environment `
+KeyPairName=vockey `
+--no-fail-on-empty-changeset
 
 if ($LASTEXITCODE -ne 0) {
     Write-Host "WordPress deployment failed."

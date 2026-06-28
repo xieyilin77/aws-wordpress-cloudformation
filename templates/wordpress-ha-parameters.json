@@ -1,0 +1,26 @@
+[
+    {
+        "ParameterKey": "EnvironmentName",
+        "ParameterValue": "wordpress"
+    },
+    {
+        "ParameterKey": "KeyPairName",
+        "ParameterValue": "vockey"
+    },
+    {
+        "ParameterKey": "MinSize",
+        "ParameterValue": "2"
+    },
+    {
+        "ParameterKey": "DesiredCapacity",
+        "ParameterValue": "2"
+    },
+    {
+        "ParameterKey": "MaxSize",
+        "ParameterValue": "4"
+    },
+    {
+        "ParameterKey": "InstanceType",
+        "ParameterValue": "t2.micro"
+    }
+]

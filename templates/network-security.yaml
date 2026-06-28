@@ -177,7 +177,7 @@ Resources:
             RouteTableId: !Ref PrivateRouteTable2
     
     # ========================================
-    # 1. Web Server Security Group (EC2)
+    # 7. Web Server Security Group (EC2)
     # ========================================
     WebServerSG:
         Type: AWS::EC2::SecurityGroup
@@ -216,7 +216,7 @@ Resources:
                   Value: !Sub '${EnvironmentName}-web-sg'
 
     # =====================================================
-    # Database Security Group
+    # 8. Database Security Group
     # =====================================================
     DatabaseSG:
         Type: AWS::EC2::SecurityGroup
@@ -244,7 +244,7 @@ Resources:
                   Value: !Sub '${EnvironmentName}-db-sg'
 
 # ========================================
-# 8. Outputs (für andere Stacks)
+# 9. Outputs (für andere Stacks)
 # ========================================
 Outputs:
     VPC:

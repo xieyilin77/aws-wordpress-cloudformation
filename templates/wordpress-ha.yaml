@@ -1,0 +1,324 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'High Availability WordPress Architecture with ALB and Auto Scaling'
+
+Parameters:
+    EnvironmentName:
+        Type: String
+        Default: wordpress
+        Description: Environment name for resource naming
+
+    KeyPairName:
+        Type: AWS::EC2::KeyPair::KeyName
+        Description: EC2 Key Pair for SSH access
+
+    AmazonLinuxAMIID:
+        Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+        Default: /aws/service/ami-amazon-linux-latest/amzn2-ami-hvm-x86_64-gp2
+
+    MinSize:
+        Type: Number
+        Default: 2
+        Description: Minimum number of instances
+
+    DesiredCapacity:
+        Type: Number
+        Default: 2
+        Description: Desired number of instances
+
+    MaxSize:
+        Type: Number
+        Default: 4
+        Description: Maximum number of instances
+
+    InstanceType:
+        Type: String
+        Description: EC2 instance type
+        AllowedValues:
+            - t2.micro
+            - t3.micro
+            - t2.small
+            - t3.small
+
+Resources:
+    # ========================================
+    # 1. ALB Security Group
+    # ========================================
+    LoadBalancerSG:
+        Type: AWS::EC2::SecurityGroup
+        Properties:
+            GroupDescription: Security Group for ALB
+            VpcId: !ImportValue wordpress-VPC
+            SecurityGroupIngress:
+                - IpProtocol: tcp
+                  FromPort: 80
+                  ToPort: 80
+                  CidrIp: 0.0.0.0/0
+                  Description: HTTP from anywhere
+                - IpProtocol: tcp
+                  FromPort: 443
+                  ToPort: 443
+                  CidrIp: 0.0.0.0/0
+                  Description: HTTPS from anywhere
+            SecurityGroupEgress:
+                - IpProtocol: -1
+                  CidrIp: 0.0.0.0/0
+                  Description: Allow all outbound traffic
+            Tags:
+                - Key: Name
+                  Value: !Sub '${EnvironmentName}-alb-sg'
+
+    # ========================================
+    # 2. Target Group
+    # ========================================
+    WordPressTargetGroup:
+        Type: AWS::ElasticLoadBalancingV2::TargetGroup
+        Properties:
+            Name: !Sub '${EnvironmentName}-wordpress-tg'
+            Port: 80
+            Protocol: HTTP
+            VpcId: !ImportValue wordpress-VPC
+            HealthCheckPath: /health.html
+            HealthCheckIntervalSeconds: 30
+            HealthCheckTimeoutSeconds: 5
+            HealthyThresholdCount: 2
+            UnhealthyThresholdCount: 2
+            TargetType: instance
+            Tags:
+                - Key: Name
+                  Value: !Sub '${EnvironmentName}-wordpress-tg'
+
+    # ========================================
+    # 3. Application Load Balancer
+    # ========================================
+    ApplicationLoadBalancer:
+        Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+        Properties:
+            Name: !Sub '${EnvironmentName}-alb'
+            Scheme: internet-facing
+            Type: application
+            IpAddressType: ipv4
+            SecurityGroups:
+                - !Ref LoadBalancerSG
+            Subnets:
+                - !ImportValue wordpress-PublicSubnet1
+                - !ImportValue wordpress-PublicSubnet2
+            Tags:
+                - Key: Name
+                  Value: !Sub '${EnvironmentName}-alb'
+
+    # ========================================
+    # 4. Listener (Port 80)
+    # ========================================
+    ALBListener:
+        Type: AWS::ElasticLoadBalancingV2::Listener
+        Properties:
+            DefaultActions:
+                - Type: forward
+                  TargetGroupArn: !Ref WordPressTargetGroup
+            LoadBalancerArn: !Ref ApplicationLoadBalancer
+            Port: 80
+            Protocol: HTTP
+
+    # ========================================
+    # 5. Launch Template
+    # ========================================
+    WordPressLaunchTemplate:
+        Type: AWS::EC2::LaunchTemplate
+        Properties:
+            LaunchTemplateName: !Sub '${EnvironmentName}-launch-template'
+            LaunchTemplateData:
+                ImageId: !Ref AmazonLinuxAMIID
+                InstanceType: !Ref InstanceType
+                KeyName: !Ref KeyPairName
+                SecurityGroupIds:
+                    - !ImportValue wordpress-WebServerSG
+                UserData:
+                    Fn::Base64: !Sub |
+                        #!/bin/bash
+                        set -euxo pipefail
+
+                        # ======================================
+                        # 1. Update System Packages
+                        # ======================================
+                        yum update -y
+
+                        # ======================================
+                        # 2. Install Apache
+                        # ======================================
+                        yum install -y httpd wget unzip curl
+
+                        yum install -y \
+                            php \
+                            php-cli \
+                            php-fpm \
+                            php-mysqlnd \
+                            php-gd \
+                            php-mbstring \
+                            php-xml \
+                            php-json \
+                            php-curl \
+                            php-zip                       
+                        
+                        # ======================================
+                        # 4. Start & Enable Apache
+                        # ======================================
+                        systemctl start httpd
+                        systemctl enable httpd
+
+                        # ======================================
+                        # 5. Download and Install WordPress
+                        # ======================================
+                        cd /tmp
+
+                        wget https://wordpress.org/latest.tar.gz
+
+                        tar -xzf latest.tar.gz
+                        mkdir -p /var/www/html/wordpress
+                        cp -r wordpress/* /var/www/html/wordpress/
+                        rm -rf wordpress latest.tar.gz
+
+                        # ======================================
+                        # 6. Configure Apache
+                        # ======================================
+                        cat > /etc/httpd/conf.d/wordpress.conf << 'EOF'
+                        <VirtualHost *:80>
+
+                            DocumentRoot /var/www/html/wordpress
+
+                            <Directory /var/www/html/wordpress>
+                                Options Indexes FollowSymLinks
+                                AllowOverride All
+                                Require all granted
+                            </Directory>
+
+                        </VirtualHost>
+                        EOF
+
+                        # ======================================
+                        # 8. Create Health Check Page
+                        # ======================================
+                        echo "Apache is working" > /var/www/html/wordpress/health.html
+
+                        # ======================================
+                        # 9. Restart Apache
+                        # ======================================
+                        systemctl restart httpd
+
+                        # ======================================
+                        # Installation Complete
+                        # ======================================
+                        echo "==========================================="
+                        echo " WordPress Installation Completed "
+                        echo "==========================================="
+
+                TagSpecifications:
+                    - ResourceType: instance
+                      Tags:
+                        - Key: Name
+                          Value: !Sub '${EnvironmentName}-wordpress-instance'
+
+    # ========================================
+    # 6. Auto Scaling Group
+    # ========================================
+    WordPressAutoScalingGroup:
+        Type: AWS::AutoScaling::AutoScalingGroup
+        Properties:
+            AutoScalingGroupName: !Sub '${EnvironmentName}-asg'
+            LaunchTemplate:
+                LaunchTemplateId: !Ref WordPressLaunchTemplate
+                Version: !GetAtt WordPressLaunchTemplate.LatestVersionNumber
+            MinSize: !Ref MinSize
+            MaxSize: !Ref MaxSize
+            DesiredCapacity: !Ref DesiredCapacity
+            VPCZoneIdentifier:
+                - !ImportValue wordpress-PublicSubnet1
+                - !ImportValue wordpress-PublicSubnet2
+            HealthCheckType: ELB
+            HealthCheckGracePeriod: 300
+            TargetGroupARNs:
+                - !Ref WordPressTargetGroup
+            Tags:
+                - Key: Name
+                  Value: !Sub '${EnvironmentName}-asg-instance'
+                  PropagateAtLaunch: true
+
+    # ========================================
+    # 7. Scaling Policies
+    # ========================================
+    ScaleOutPolicy:
+        Type: AWS::AutoScaling::ScalingPolicy
+        Properties:
+            PolicyName: !Sub '${EnvironmentName}-scale-out'
+            AutoScalingGroupName: !Ref WordPressAutoScalingGroup
+            AdjustmentType: ChangeInCapacity
+            ScalingAdjustment: 1
+            Cooldown: 300
+
+    ScaleInPolicy:
+        Type: AWS::AutoScaling::ScalingPolicy
+        Properties:
+            PolicyName: !Sub '${EnvironmentName}-scale-in'
+            AutoScalingGroupName: !Ref WordPressAutoScalingGroup
+            AdjustmentType: ChangeInCapacity
+            ScalingAdjustment: -1
+            Cooldown: 300
+
+    # ========================================
+    # 8. CloudWatch Alarms
+    # ========================================
+    CPUAlarmHigh:
+        Type: AWS::CloudWatch::Alarm
+        Properties:
+            AlarmName: !Sub '${EnvironmentName}-cpu-high'
+            AlarmDescription: 'CPU utilization is high (>70%)'
+            MetricName: CPUUtilization
+            Namespace: AWS/EC2
+            Statistic: Average
+            Period: 300
+            EvaluationPeriods: 2
+            Threshold: 70
+            ComparisonOperator: GreaterThanThreshold
+            Dimensions:
+                - Name: AutoScalingGroupName
+                  Value: !Ref WordPressAutoScalingGroup
+            AlarmActions:
+                - !Ref ScaleOutPolicy
+
+    CPUAlarmLow:
+        Type: AWS::CloudWatch::Alarm
+        Properties:
+            AlarmName: !Sub '${EnvironmentName}-cpu-low'
+            AlarmDescription: 'CPU utilization is low (<30%)'
+            MetricName: CPUUtilization
+            Namespace: AWS/EC2
+            Statistic: Average
+            Period: 300
+            EvaluationPeriods: 2
+            Threshold: 30
+            ComparisonOperator: LessThanThreshold
+            Dimensions:
+                - Name: AutoScalingGroupName
+                  Value: !Ref WordPressAutoScalingGroup
+            AlarmActions:
+                - !Ref ScaleInPolicy
+
+Outputs:
+    LoadBalancerDNSName:
+        Description: DNS Name of the ALB
+        Value: !GetAtt ApplicationLoadBalancer.DNSName
+
+    LoadBalancerURL:
+        Description: WordPress URL via ALB
+        Value: !Sub "http://${ApplicationLoadBalancer.DNSName}"
+
+    TargetGroupArn:
+        Description: Target Group ARN
+        Value: !Ref WordPressTargetGroup
+
+    AutoScalingGroupName:
+        Description: Auto Scaling Group Name
+        Value: !Ref WordPressAutoScalingGroup
+
+    LaunchTemplateId:
+        Description: Launch Template ID
+        Value: !Ref WordPressLaunchTemplate

@@ -51,11 +51,11 @@ Resources:
                     yum install -y httpd wget unzip curl
 
                     # =========================
-                    # 3. Install PHP 7.4
+                    # 3. Install PHP 8.2
                     # =========================
-                    amazon-linux-extras enable php7.4
+                    amazon-linux-extras enable php8.2
                     yum clean metadata
-                    yum install -y php php-cli php-mysqlnd php-gd php-mbstring php-xml php-json php-fpm php-curl php-zip
+                    yum install -y php php-cli php-common php-fpm php-mysqlnd php-gd php-mbstring php-xml php-json php-fpm php-curl php-zip
 
                     # =========================
                     # 4. Install MariaDB
